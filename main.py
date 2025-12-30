@@ -13,6 +13,20 @@ from config import load_config
 from db import DB
 
 logging.basicConfig(level=logging.INFO)
+async def start_health_server():
+    app = web.Application()
+
+    async def handle_root(request):
+        return web.Response(text="OK")
+
+    app.router.add_get("/", handle_root)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+
+    port = int(os.environ.get("PORT", "10000"))  # Render задаёт PORT автоматически
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
 
 CATEGORIES = ["Кашрут", "Шаббат", "Семья", "Учёба", "Другое"]
 
