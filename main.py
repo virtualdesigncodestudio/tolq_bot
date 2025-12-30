@@ -109,7 +109,8 @@ async def main():
         await message.answer(f"Спасибо! Вопрос принят. №{ticket_id}")
         await state.clear()
 
-    @dp.message(F.chat.id == cfg.group_chat_id)
+    
+    @dp.message(F.chat.id == cfg.group_chat_id, F.reply_to_message)
     async def operators_reply(message: Message):
         if not message.reply_to_message:
             return
