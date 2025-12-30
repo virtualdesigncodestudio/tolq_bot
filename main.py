@@ -102,8 +102,17 @@ async def main():
             f"{question}\n\n"
             f"Ответьте reply — ответ уйдёт пользователю."
         )
+        try:
+            msg = await bot.send_message(cfg.group_chat_id, text)
+        except Exception as e:
+            logging.exception("FAILED to send to group")
+            await message.answer(
+                "⚠️ Я не смог отправить вопрос в группу раввинов.\n"
+                "Проверьте, что бот добавлен в группу, назначен админом, и GROUP_CHAT_ID правильный."
+            )
+            return
 
-        msg = await bot.send_message(cfg.group_chat_id, text)
+        
         await db.set_ticket_group_message(ticket_id, msg.message_id)
 
         await message.answer(f"Спасибо! Вопрос принят. №{ticket_id}")
