@@ -42,6 +42,11 @@ async def main():
     @dp.message(Command("id"))
     async def my_id(message: Message):
         await message.answer(f"Ваш id: {message.from_user.id}")
+    
+    @dp.message(Command("chatid"))
+    async def chat_id(message: Message):
+        await message.answer(f"chat_id этого чата: {message.chat.id}")
+    
 
     @dp.message(CommandStart())
     async def start(message: Message, state: FSMContext):
