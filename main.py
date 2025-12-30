@@ -154,7 +154,7 @@ async def main():
         )
         await db.mark_ticket_answered(ticket_id, message.from_user.id)
         await message.reply("Ответ отправлен пользователю.")
-
+       await start_health_server()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
