@@ -123,7 +123,7 @@ async def main():
             f"Ответьте reply — ответ уйдёт пользователю."
         )
         try:
-            msg = await bot.send_message(cfg.group_chat_id, text)
+            header_msg = await bot.send_message(cfg.group_chat_id, text)
         except Exception as e:
             logging.exception("FAILED to send to group")
             await message.answer(
@@ -133,7 +133,16 @@ async def main():
             return
 
         
-        await db.set_ticket_group_message(ticket_id, msg.message_id)
+        await db.set_ticket_group_message(ticket_id, header_msg.message_id)
+        try:
+            await bot.copy_message(
+                chat_id=cfg.group_chat_id,
+                from_chat_id=message.chat.id,
+                message_id=message.message_id,
+                reply_to_message_id=header_msg.message_id
+                )
+        except Exception:
+            logging.exception("FAILED to copy user message to group")
 
         await message.answer(f"Спасибо! Вопрос принят. №{ticket_id}")
         await state.clear()
