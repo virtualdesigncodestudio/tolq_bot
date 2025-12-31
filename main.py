@@ -101,7 +101,7 @@ async def main():
         data = await state.get_data()
         name = data.get("name") or "Анонимно"
         category = data.get("category")
-        question = message.text
+        question = (message.text or message.caption or "").strip()
 
         ticket_id = await db.create_ticket(
             message.from_user.id,
