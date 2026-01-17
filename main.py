@@ -192,6 +192,12 @@ async def main():
 
         await db.mark_ticket_answered(ticket_id, message.from_user.id)
         await message.reply("Ответ отправлен пользователю.")
+        
+    @dp.message()
+    async def fallback(message: Message, state: FSMContext):
+        if await state.get_state() is None:
+            await message.answer("Нажмите 📝 Задать вопрос", reply_markup=MAIN_KB)
+
     await start_health_server()
     await dp.start_polling(bot)
 
