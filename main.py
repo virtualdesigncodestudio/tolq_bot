@@ -114,6 +114,13 @@ async def main():
         await state.update_data(category=cb.data[4:])
         await cb.message.answer("Напишите ваш вопрос:")
         await state.set_state(AskFlow.waiting_question)
+        
+    @dp.message(AskFlow.waiting_category)
+    async def reject_text_in_category(message: Message, state: FSMContext):
+        await message.answer(
+            "Пожалуйста, выберите тему кнопкой ниже 👇",
+            reply_markup=categories_kb()
+        )
 
     @dp.message(AskFlow.waiting_question, F.text)
     async def get_question(message: Message, state: FSMContext):
