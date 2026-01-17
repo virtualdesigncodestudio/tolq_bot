@@ -12,6 +12,16 @@ from aiogram import F
 
 from config import load_config
 from db import DB
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+
+MAIN_KB = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📝 Задать вопрос")],
+    ],
+    resize_keyboard=True
+)
+
+
 
 logging.basicConfig(level=logging.INFO)
 async def start_health_server():
@@ -67,6 +77,14 @@ async def main():
 
     @dp.message(CommandStart())
     async def start(message: Message, state: FSMContext):
+        await state.clear()
+        await message.answer(
+            "Шалом! Нажмите кнопку ниже, чтобы задать вопрос.",
+            reply_markup=MAIN_KB
+        )
+
+    @dp.message(F.text == "📝 Задать вопрос")
+    async def start_ask_flow(message: Message, state: FSMContext):
         await state.clear()
         await db.upsert_user(message.from_user.id, None)
         await message.answer(
@@ -138,8 +156,13 @@ async def main():
         
         await db.set_ticket_group_message(ticket_id, header_msg.message_id)
         
-        await message.answer(f"Спасибо! Вопрос принят. №{ticket_id}")
         await state.clear()
+        await message.answer(
+            f"Спасибо! Вопрос принят. №{ticket_id}\n\n"
+            "Чтобы задать ещё один вопрос — нажмите кнопку ниже.",
+            reply_markup=MAIN_KB
+        )
+
 
 
     @dp.message(AskFlow.waiting_question)
