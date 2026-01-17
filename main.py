@@ -8,6 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram import F
 
 from config import load_config
 from db import DB
@@ -96,8 +97,9 @@ async def main():
         await cb.message.answer("Напишите ваш вопрос:")
         await state.set_state(AskFlow.waiting_question)
 
-    @dp.message(AskFlow.waiting_question)
+    @dp.message(AskFlow.waiting_question, F.text)
     async def get_question(message: Message, state: FSMContext):
+
         data = await state.get_data()
         name = data.get("name") or "Анонимно"
         category = data.get("category")
