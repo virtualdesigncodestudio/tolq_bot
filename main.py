@@ -141,9 +141,11 @@ async def main():
         await message.answer(f"Спасибо! Вопрос принят. №{ticket_id}")
         await state.clear()
 
+
     @dp.message(AskFlow.waiting_question)
-    async def reject_non_text_question(message: Message, state: FSMContext):
-        await message.answer("Извините, можно отправлять вопрос только текстом.")
+    async def reject_non_text(message: Message, state: FSMContext):
+        await message.answer("Сейчас можно отправлять вопрос только текстом. Фото/голосовые отключены.")
+
 
     @dp.message(F.chat.id == cfg.group_chat_id, F.reply_to_message)
     async def operators_reply(message: Message):
