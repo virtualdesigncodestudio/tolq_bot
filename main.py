@@ -193,8 +193,6 @@ async def main():
         await bot.send_message(
             user_id,
             f"Ответ по вопросу #{ticket_id}:\n\n{message.text}\n\n"
-            "Чтобы задать новый вопрос — нажмите кнопку ниже.",
-            reply_markup=MAIN_KB
         )
 
         await db.mark_ticket_answered(ticket_id, message.from_user.id)
