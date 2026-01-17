@@ -78,10 +78,8 @@ async def main():
     @dp.message(CommandStart())
     async def start(message: Message, state: FSMContext):
         await state.clear()
-        await message.answer(
-            "Шалом! Нажмите кнопку ниже, чтобы задать вопрос.",
-            reply_markup=MAIN_KB
-        )
+        if message.chat.type == "private":
+            await message.answer("Шалом! Нажмите кнопку ниже, чтобы задать вопрос.", reply_markup=MAIN_KB)
 
     @dp.message(F.text == "📝 Задать вопрос")
     async def start_ask_flow(message: Message, state: FSMContext):
