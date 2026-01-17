@@ -185,6 +185,7 @@ async def main():
             message.reply_to_message.message_id
         )
         if not row:
+            await message.reply("⚠️ Не нашёл вопрос по этому reply. Ответьте reply именно на сообщение бота с номером вопроса.")
             return
 
         ticket_id, user_id = row
