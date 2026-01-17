@@ -200,8 +200,11 @@ async def main():
         
     @dp.message()
     async def fallback(message: Message, state: FSMContext):
+        if message.chat.type in ("group", "supergroup"):
+            return
         if await state.get_state() is None:
             await message.answer("Нажмите 📝 Задать вопрос", reply_markup=MAIN_KB)
+
 
     await start_health_server()
     await dp.start_polling(bot)
