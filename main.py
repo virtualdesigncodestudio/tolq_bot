@@ -102,10 +102,11 @@ async def main():
         name = data.get("name") or "Анонимно"
         category = data.get("category")
         
-        question = (message.text or message.caption or "").strip()
+        
+        question = message.text.strip()
         if not question:
-            question = f"[{message.content_type}]"
-
+            await message.answer("Пожалуйста, отправьте вопрос текстом.")
+            return
 
         ticket_id = await db.create_ticket(
             message.from_user.id,
