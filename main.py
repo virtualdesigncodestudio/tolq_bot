@@ -142,7 +142,7 @@ async def main():
         await state.set_state(AskFlow.rabbi_private_answer)
 
     @dp.callback_query(F.data.startswith("ans_grp:"))
-        async def start_group_answer(cb: CallbackQuery, state: FSMContext):
+    async def start_group_answer(cb: CallbackQuery, state: FSMContext):
         ticket_id = int(cb.data.split(":")[1])
         await cb.answer()
 
