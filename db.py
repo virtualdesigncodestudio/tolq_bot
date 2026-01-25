@@ -86,6 +86,13 @@ class DB:
             (group_chat_id, group_message_id),
         )
         return await cur.fetchone()
+  
+    async def find_ticket_by_id(self, ticket_id: int):
+        cur = await self.conn.execute(
+            "SELECT user_id, group_chat_id, group_message_id FROM tickets WHERE id=?",
+            (ticket_id,)
+        )
+        return await cur.fetchone()
 
     async def mark_ticket_answered(self, ticket_id, operator_user_id):
         await self.conn.execute(
