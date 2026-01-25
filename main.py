@@ -46,6 +46,9 @@ class AskFlow(StatesGroup):
     waiting_category = State()
     waiting_question = State()
 
+    rabbi_private_answer = State()
+    rabbi_group_answer = State()
+
 def categories_kb():
     kb = InlineKeyboardBuilder()
     for c in CATEGORIES:
@@ -57,6 +60,15 @@ def name_kb():
     kb = InlineKeyboardBuilder()
     kb.button(text="Пропустить", callback_data="name:skip")
     return kb.as_markup()
+    
+
+def answer_kb(ticket_id: int):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✉️ Ответить приватно", callback_data=f"ans_priv:{ticket_id}")
+    kb.button(text="💬 Ответить в группе", callback_data=f"ans_grp:{ticket_id}")
+    kb.adjust(2)
+    return kb.as_markup()
+
 
 async def main():
     cfg = load_config()
@@ -95,7 +107,7 @@ async def main():
     async def skip_name(cb: CallbackQuery, state: FSMContext):
         await cb.answer()
         await state.update_data(name=None)
-        await cb.message.answer("Выберите тему вопроса:", reply_markup=categories_kb())
+        await cb.message.answer("Выберите тему вопроса:", reply_markup=())
         await state.set_state(AskFlow.waiting_category)
 
     @dp.message(AskFlow.waiting_name)
@@ -112,6 +124,120 @@ async def main():
         await state.update_data(category=cb.data[4:])
         await cb.message.answer("Напишите ваш вопрос:")
         await state.set_state(AskFlow.waiting_question)
+
+    @dp.callback_query(F.data.startswith("ans_priv:"))
+    async def start_private_answer(cb: CallbackQuery, state: FSMContext):
+        ticket_id = int(cb.data.split(":")[1])
+        await cb.answer()
+
+        await state.clear()
+        await state.update_data(ticket_id=ticket_id)
+
+    
+        await cb.message.bot.send_message(
+            cb.from_user.id,
+            f"✍️ Напишите ответ на вопрос #{ticket_id} (ответ будет скрыт от других участников группы):"
+        )
+
+        await state.set_state(AskFlow.rabbi_private_answer)
+
+    @dp.callback_query(F.data.startswith("ans_grp:"))
+        async def start_group_answer(cb: CallbackQuery, state: FSMContext):
+        ticket_id = int(cb.data.split(":")[1])
+        await cb.answer()
+
+        await state.clear()
+        await state.update_data(ticket_id=ticket_id)
+
+    
+        await cb.message.reply(
+            f"✍️ Напишите следующим сообщением ваш ответ на вопрос #{ticket_id}.\n"
+            f"Я отправлю его пользователю и опубликую reply-ом к вопросу."
+        )
+
+        await state.set_state(AskFlow.rabbi_group_answer)
+
+
+    @dp.message(AskFlow.rabbi_group_answer, F.chat.id == cfg.group_chat_id, F.text)
+async def handle_group_answer(message: Message, state: FSMContext):
+    data = await state.get_data()
+    ticket_id = data.get("ticket_id")
+
+    if not ticket_id:
+        await message.reply("⚠️ Нет активного вопроса. Нажмите кнопку под вопросом ещё раз.")
+        await state.clear()
+        return
+
+    row = await db.find_ticket_by_id(ticket_id)
+    if not row:
+        await message.reply("⚠️ Вопрос не найден.")
+        await state.clear()
+        return
+
+    user_id, group_chat_id, group_msg_id = row
+
+    # 1) Отправляем пользователю
+    await message.bot.send_message(
+        user_id,
+        f"Ответ по вопросу #{ticket_id}:\n\n{message.text}",
+        reply_markup=MAIN_KB
+    )
+
+    # 2) Публикуем в группе reply-ом к вопросу (ботом)
+    await message.bot.send_message(
+        group_chat_id,
+        f"💬 Ответ по вопросу #{ticket_id}:\n\n{message.text}",
+        reply_to_message_id=group_msg_id
+    )
+
+    await db.mark_ticket_answered(ticket_id, message.from_user.id)
+
+    # (Опционально) удалить исходное сообщение раввина, чтобы не было дубля
+    # нужно, чтобы бот был админом с правом удалять
+    # try:
+    #     await message.delete()
+    # except Exception:
+    #     pass
+
+    await message.reply("✅ Ответ отправлен пользователю и опубликован в группе.")
+    await state.clear()
+
+    
+    @dp.message(AskFlow.rabbi_private_answer, F.chat.type == "private", F.text)
+    async def handle_private_answer(message: Message, state: FSMContext):
+        data = await state.get_data()
+        ticket_id = data.get("ticket_id")
+
+        if not ticket_id:
+            await message.answer("⚠️ Нет активного вопроса. Нажмите кнопку под вопросом в группе ещё раз.")
+            await state.clear()
+            return
+
+        row = await db.find_ticket_by_id(ticket_id)
+        if not row:
+            await message.answer("⚠️ Вопрос не найден.")
+            await state.clear()
+            return
+
+        user_id, group_chat_id, group_msg_id = row
+
+    
+        await message.bot.send_message(
+            user_id,
+            f"Ответ по вопросу #{ticket_id}:\n\n{message.text}",
+            reply_markup=MAIN_KB
+        )
+
+        await message.bot.send_message(
+            group_chat_id,
+            f"✅ Ответ по вопросу #{ticket_id} отправлен пользователю (приватно).",
+            reply_to_message_id=group_msg_id
+        )
+
+        await db.mark_ticket_answered(ticket_id, message.from_user.id)
+        await message.answer("✅ Ответ отправлен пользователю. (Приватно)")
+        await state.clear()
+
         
     @dp.message(AskFlow.waiting_category)
     async def reject_text_in_category(message: Message, state: FSMContext):
@@ -149,7 +275,8 @@ async def main():
             f"Ответьте reply — ответ уйдёт пользователю."
         )
         try:
-            header_msg = await bot.send_message(cfg.group_chat_id, text)
+            header_msg = await bot.send_message(cfg.group_chat_id, text, reply_markup=answer_kb(ticket_id))
+
         except Exception as e:
             logging.exception("FAILED to send to group")
             await message.answer(
