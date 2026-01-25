@@ -159,48 +159,40 @@ async def main():
 
 
     @dp.message(AskFlow.rabbi_group_answer, F.chat.id == cfg.group_chat_id, F.text)
-async def handle_group_answer(message: Message, state: FSMContext):
-    data = await state.get_data()
-    ticket_id = data.get("ticket_id")
+    async def handle_group_answer(message: Message, state: FSMContext):
+        data = await state.get_data()
+        ticket_id = data.get("ticket_id")
 
-    if not ticket_id:
-        await message.reply("⚠️ Нет активного вопроса. Нажмите кнопку под вопросом ещё раз.")
+        if not ticket_id:
+            await message.reply("⚠️ Нет активного вопроса. Нажмите кнопку под вопросом ещё раз.")
+            await state.clear()
+            return
+
+        row = await db.find_ticket_by_id(ticket_id)
+        if not row:
+            await message.reply("⚠️ Вопрос не найден.")
+            await state.clear()
+            return
+
+        user_id, group_chat_id, group_msg_id = row
+
+   
+        await message.bot.send_message(    
+            user_id,
+            f"Ответ по вопросу #{ticket_id}:\n\n{message.text}",
+            reply_markup=MAIN_KB
+        )
+
+
+        await message.bot.send_message(
+            group_chat_id,
+            f"💬 Ответ по вопросу #{ticket_id}:\n\n{message.text}",
+            reply_to_message_id=group_msg_id
+        )
+
+        await db.mark_ticket_answered(ticket_id, message.from_user.id)
+        await message.reply("✅ Ответ отправлен пользователю и опубликован в группе.")
         await state.clear()
-        return
-
-    row = await db.find_ticket_by_id(ticket_id)
-    if not row:
-        await message.reply("⚠️ Вопрос не найден.")
-        await state.clear()
-        return
-
-    user_id, group_chat_id, group_msg_id = row
-
-    # 1) Отправляем пользователю
-    await message.bot.send_message(
-        user_id,
-        f"Ответ по вопросу #{ticket_id}:\n\n{message.text}",
-        reply_markup=MAIN_KB
-    )
-
-    # 2) Публикуем в группе reply-ом к вопросу (ботом)
-    await message.bot.send_message(
-        group_chat_id,
-        f"💬 Ответ по вопросу #{ticket_id}:\n\n{message.text}",
-        reply_to_message_id=group_msg_id
-    )
-
-    await db.mark_ticket_answered(ticket_id, message.from_user.id)
-
-    # (Опционально) удалить исходное сообщение раввина, чтобы не было дубля
-    # нужно, чтобы бот был админом с правом удалять
-    # try:
-    #     await message.delete()
-    # except Exception:
-    #     pass
-
-    await message.reply("✅ Ответ отправлен пользователю и опубликован в группе.")
-    await state.clear()
 
     
     @dp.message(AskFlow.rabbi_private_answer, F.chat.type == "private", F.text)
